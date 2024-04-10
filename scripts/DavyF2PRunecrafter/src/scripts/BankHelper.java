@@ -1,0 +1,135 @@
+package scripts;
+
+import org.tribot.script.sdk.Bank;
+import org.tribot.script.sdk.Log;
+import org.tribot.script.sdk.Waiting;
+import org.tribot.script.sdk.query.Query;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
+
+import static scripts.ErrorHelper.throwError;
+import static scripts.Utils.getRequiredTiara;
+import static scripts.WaitHelper.*;
+
+public class BankHelper {
+
+
+    public static boolean withdrawFromBank(String itemName, int count) {
+        if (!Bank.ensureOpen()) {
+            Log.error("Could not open the bank.");
+            throwError("Could not open the bank.");
+            return false;
+        }
+
+        wait4Seconds();
+
+        Waiting.waitUntil(5000, Bank::isOpen);
+
+        if (!Bank.contains(itemName)) {
+            wait3Seconds();
+
+            Log.error("Bank does not contain the required item: " + itemName);
+            throwError("Bank does not contain the required item: " + itemName);
+            return false;
+        }
+
+        if (!Bank.withdraw(itemName, count)) {
+            Log.error("Failed to withdraw the required item: " + itemName);
+            throwError("Failed to withdraw the required item: " + itemName);
+            return false;
+        }
+
+        if (!Bank.close()) {
+            Log.error("Failed to close the bank properly, but item was withdrawn.");
+            throwError("Failed to close the bank properly, but item was withdrawn.");
+        }
+
+        wait2Seconds();
+
+        return true;
+    }
+
+    public static List<String> checkBankForSupplies(String selectedRuneType) {
+        String requiredTiara = getRequiredTiara(selectedRuneType);
+        List<String> missingItems = new ArrayList<>();
+
+        if (!Bank.isOpen() && !Bank.ensureOpen()) {
+            wait1Second();
+
+            Log.info("Failed to open bank.");
+            throwError("Failed to open bank");
+            return Arrays.asList("Bank could not be opened");
+        }
+
+        if (!Bank.depositInventory()) {
+            Log.info("Failed to deposit inventory or equipment.");
+            throwError("Failed to deposit inventory or equipment");
+            return Arrays.asList("Failed to deposit items");
+        }
+
+        wait1Second();
+
+        Log.info("Checking if bank contains " + requiredTiara);
+
+        if (requiredTiara != null && !Bank.contains(requiredTiara)) {
+            Log.info("Bank does not contain " + requiredTiara);
+
+            boolean isTiaraEquipped = Query.equipment()
+                    .nameContains(requiredTiara)
+                    .findFirst()
+                    .isPresent();
+
+            if (isTiaraEquipped) {
+                System.out.println(requiredTiara + " is already equipped.");
+            } else {
+                missingItems.add(requiredTiara);
+            }
+
+        } else {
+            Log.info("Bank does contain " + requiredTiara);
+        }
+
+        Random random = new Random();
+        int requiredEssenceAmount = 1750 + random.nextInt(350); // Generate required essence amount
+
+        int essenceCount = Bank.getCount("Pure essence");
+        if (essenceCount < requiredEssenceAmount) {
+            Log.info("Not enough Pure essence. Needed: " + requiredEssenceAmount + ", Found: " + essenceCount);
+            // Ensure "Pure essence" is only added once, regardless of where the check fails
+            if (!missingItems.contains("Pure essence")) {
+                missingItems.add("Pure essence");
+            }
+        } else {
+            Log.info("We have " + essenceCount + " pure essence.");
+        }
+
+        return missingItems;
+    }
+
+    public static boolean depositInventoryToBankAndKeepOpen() {
+        wait3Seconds();
+
+        if (!Bank.ensureOpen()) {
+            Log.error("Could not open the bank to deposit inventory.");
+            throwError("Could not open the bank to deposit inventory.");
+            return false;
+        }
+
+        wait2Seconds();
+
+        if (!Bank.depositInventory()) {
+            Log.error("Failed to deposit inventory.");
+            throwError("Failed to deposit inventory.");
+            return false;
+        }
+
+        wait2Seconds();
+
+        return true;
+    }
+
+
+}
