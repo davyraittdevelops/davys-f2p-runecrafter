@@ -1,5 +1,6 @@
 package scripts;
 
+import org.tribot.script.sdk.Inventory;
 import org.tribot.script.sdk.Waiting;
 import org.tribot.script.sdk.query.Query;
 import org.tribot.script.sdk.types.InventoryItem;
@@ -8,7 +9,6 @@ import java.util.Optional;
 
 import static scripts.BankHelper.withdrawFromBank;
 import static scripts.Utils.getRequiredTiara;
-import static scripts.WaitHelper.wait1Second;
 
 public class EquipmentHelper {
 
@@ -35,7 +35,7 @@ public class EquipmentHelper {
             return false;
         }
 
-        wait1Second();
+        Waiting.waitUntil(9000, () -> Inventory.contains(requiredTiara));
 
         return equipItem(requiredTiara);
     }
@@ -50,7 +50,7 @@ public class EquipmentHelper {
         InventoryItem item = itemOpt.get();
         if (item.click("Wear")) {
             System.out.println("Equipping " + itemName + "...");
-            Waiting.waitNormal(1000, 250); // Wait for a bit after equipping. Adjust timings as needed.
+            Waiting.waitUntil(9000, () -> Inventory.contains(itemName));
             return true;
         } else {
             System.err.println("Failed to equip " + itemName + ".");

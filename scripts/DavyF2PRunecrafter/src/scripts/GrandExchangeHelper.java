@@ -2,8 +2,10 @@ package scripts;
 
 import org.tribot.script.sdk.GrandExchange;
 import org.tribot.script.sdk.Log;
+import org.tribot.script.sdk.Waiting;
 import org.tribot.script.sdk.query.Query;
 import org.tribot.script.sdk.types.GrandExchangeOffer;
+import org.tribot.script.sdk.util.TribotRandom;
 
 import java.util.List;
 import java.util.Optional;
@@ -27,6 +29,8 @@ public class GrandExchangeHelper {
                 return false;
             }
 
+            Waiting.waitUntil(9000, () -> GrandExchange.isOpen());
+
             GrandExchange.CreateOfferConfig offerConfig = GrandExchange.CreateOfferConfig.builder()
                     .itemName(itemName)
                     .quantity(quantity)
@@ -39,7 +43,9 @@ public class GrandExchangeHelper {
             }
 
             Log.info("Buy offer for " + itemName + " placed at price " + currentPrice + ". Waiting for completion...");
-            wait4Seconds(); // Implement this method to wait based on your needs
+
+            //Wait a bit for the offer to complete
+            Waiting.waitNormal(5000, 750);
 
             // Fetch the offer and check its status
             Optional<GrandExchangeOffer> offerOpt = Query.grandExchangeOffers()
@@ -60,9 +66,20 @@ public class GrandExchangeHelper {
                     Log.info("Offer did not complete. Increasing price and retrying...");
                     currentPrice = (int) (currentPrice * priceIncreaseFactor); // Increase the price by 10%
                     GrandExchange.abort(offer.getSlot());
-                    wait4Seconds(); // Time buffer after cancelling an offer
+
+                    boolean isAborted = Waiting.waitUntil(4000, () -> {
+                        // Refresh the offer to get the latest status
+                        Optional<GrandExchangeOffer> refreshedOffer = Query.grandExchangeOffers()
+                                .itemNameEquals("itemName")
+                                .findFirst();
+
+                        return refreshedOffer.isPresent() && refreshedOffer.get().getStatus() == GrandExchangeOffer.Status.CANCELLED;
+                    });
+
+                    Log.info("Aborted offer");
+
                     GrandExchange.collectAll();
-                    wait4Seconds();
+
                 }
             } else {
                 Log.error("Failed to find the placed offer.");
@@ -89,7 +106,7 @@ public class GrandExchangeHelper {
 
             switch (item) {
                 case "Pure essence":
-                    quantityToBuy = 1500 + random.nextInt(501);
+                    quantityToBuy = 600 + random.nextInt(50);
                     price = 1;
                     break;
                 case "Air tiara":
@@ -112,12 +129,9 @@ public class GrandExchangeHelper {
                 // Handle failure: stop the script, retry, or log an error, etc.
             } else {
                 Log.info("Successfully placed a buy offer for " + quantityToBuy + " of " + item);
-                // Optionally, wait for completion and collect items
 
             }
         }
-
-        wait4Seconds();
 
         // Close the Grand Exchange interface if open
         if (GrandExchange.isOpen()) {

@@ -1,6 +1,7 @@
 package scripts;
 
 import org.tribot.script.sdk.Bank;
+import org.tribot.script.sdk.Inventory;
 import org.tribot.script.sdk.Log;
 import org.tribot.script.sdk.Waiting;
 import org.tribot.script.sdk.query.Query;
@@ -24,13 +25,9 @@ public class BankHelper {
             return false;
         }
 
-        wait4Seconds();
-
         Waiting.waitUntil(5000, Bank::isOpen);
 
         if (!Bank.contains(itemName)) {
-            wait3Seconds();
-
             Log.error("Bank does not contain the required item: " + itemName);
             throwError("Bank does not contain the required item: " + itemName);
             return false;
@@ -42,12 +39,15 @@ public class BankHelper {
             return false;
         }
 
+        Waiting.waitUntil(6000, () -> Inventory.contains(itemName));
+
+
         if (!Bank.close()) {
             Log.error("Failed to close the bank properly, but item was withdrawn.");
             throwError("Failed to close the bank properly, but item was withdrawn.");
         }
 
-        wait2Seconds();
+        Waiting.waitUntil(15000, () -> !Bank.isOpen());
 
         return true;
     }
@@ -56,9 +56,9 @@ public class BankHelper {
         String requiredTiara = getRequiredTiara(selectedRuneType);
         List<String> missingItems = new ArrayList<>();
 
-        if (!Bank.isOpen() && !Bank.ensureOpen()) {
-            wait1Second();
+        Waiting.waitUntil(15000, Bank::isOpen);
 
+        if (!Bank.isOpen() && !Bank.ensureOpen()) {
             Log.info("Failed to open bank.");
             throwError("Failed to open bank");
             return Arrays.asList("Bank could not be opened");
@@ -70,7 +70,7 @@ public class BankHelper {
             return Arrays.asList("Failed to deposit items");
         }
 
-        wait1Second();
+        Waiting.waitUntil(15000, Inventory::isEmpty);
 
         Log.info("Checking if bank contains " + requiredTiara);
 
@@ -83,7 +83,7 @@ public class BankHelper {
                     .isPresent();
 
             if (isTiaraEquipped) {
-                System.out.println(requiredTiara + " is already equipped.");
+                Log.info("We have it equipped though! ");
             } else {
                 missingItems.add(requiredTiara);
             }
@@ -93,7 +93,7 @@ public class BankHelper {
         }
 
         Random random = new Random();
-        int requiredEssenceAmount = 1750 + random.nextInt(350); // Generate required essence amount
+        int requiredEssenceAmount = 100 + random.nextInt(50); // Generate required essence amount
 
         int essenceCount = Bank.getCount("Pure essence");
         if (essenceCount < requiredEssenceAmount) {
@@ -110,7 +110,6 @@ public class BankHelper {
     }
 
     public static boolean depositInventoryToBankAndKeepOpen() {
-        wait3Seconds();
 
         if (!Bank.ensureOpen()) {
             Log.error("Could not open the bank to deposit inventory.");
@@ -118,7 +117,7 @@ public class BankHelper {
             return false;
         }
 
-        wait2Seconds();
+        Waiting.waitUntil(15000, Bank::isOpen);
 
         if (!Bank.depositInventory()) {
             Log.error("Failed to deposit inventory.");
@@ -126,7 +125,11 @@ public class BankHelper {
             return false;
         }
 
-        wait2Seconds();
+        Waiting.waitUntil(15000, Inventory::isEmpty);
+
+        if (!Inventory.isEmpty()) {
+            throwError("Failed to empty inventory");
+        }
 
         return true;
     }

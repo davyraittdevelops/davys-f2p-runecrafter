@@ -123,54 +123,39 @@ public class DavyF2PRunecrafter implements TribotScript {
 	}
 
 	private void craftAirRunes() {
-		wait2Seconds();
-
 		walkToFallyBank();
 
-		wait2Seconds();
+		while(true) {
+			// Check if the Bank contains enough pure essence and if we are still wearing the tiara
+			List<String> missingItems = checkBankForSupplies(selectedRuneType);
 
-		for (int i = 0; i < 999; i++) {
-			withdrawFromBank("Pure essence", 28);
+			if (missingItems.isEmpty()) {
+				// If everything is as should be, do another round
+				withdrawFromBank("Pure essence", 28);
 
-			checkIfWeShouldRun();
+				walkToAirAltar();
 
-			walkToAirAltar();
+				interactWithObject("Mysterious ruins", "Enter");
 
-			interactWithObject("Mysterious ruins", "Enter");
+				interactWithObject("Altar", "Craft-rune");
 
-			wait1Second();
+				interactWithObject("Portal", "Use");
 
-			interactWithObject("Altar", "Craft-rune");
+				walkToFallyBank();
 
-			wait1Second();
+				chanceOfFakeBreak();
 
-			interactWithObject("Portal", "Use");
+				depositInventoryToBankAndKeepOpen();
 
-			wait2Seconds();
+				chanceOfFakeBreak();
 
-			checkIfWeShouldRun();
+				tripsDone++;
+			} else {
+				// If we are missing stuf, go and purchase it
+				purchaseMissingItems(missingItems);
+				walkToFallyBank();
+			}
 
-			walkToFallyBank();
-
-			chanceOfFakeBreak();
-
-			depositInventoryToBankAndKeepOpen();
-
-			// One in 15 (or random) chance to leave the screen and have a fake break
-			chanceOfFakeBreak();
-
-			tripsDone++;
-
-			// Check if we still have enough rune essence here, enter different part in loop to buy and walk back
-//			List<String> missingItems = checkBankForSupplies(selectedRuneType);
-//			if (!missingItems.isEmpty()) {
-//				walkToGrandExchange();
-//				// Missing items found, handle accordingly
-//				Log.info("Missing items: " + String.join(", ", missingItems));
-//				purchaseMissingItems(missingItems);
-//			} else {
-//				Log.info("All required supplies for crafting " + selectedRuneType + " are present.");
-//			}
 		}
 
 

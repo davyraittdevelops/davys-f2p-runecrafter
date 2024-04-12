@@ -19,10 +19,12 @@ public class WalkHelper {
     }
 
     public static void walkToFallyBank() {
+        checkIfWeShouldRun();
         walkTo(new WorldTile(3011, 3357, 0), "Fally Bank");
     }
 
     public static void walkToAirAltar() {
+        checkIfWeShouldRun();
         walkTo(new WorldTile(2986, 3294, 0), "Air Altar");
     }
 
@@ -42,9 +44,8 @@ public class WalkHelper {
         if (success) {
             Log.info("Walking to " + destinationName + ".");
             // Wait until the player stops moving to consider the walk finished.
-            boolean reachedDestination = Waiting.waitUntil(15000, () ->!MyPlayer.isMoving());
+            boolean reachedDestination = Waiting.waitUntil(15000, () -> MyPlayer.getTile().distanceTo(destination) <= 5 && !MyPlayer.isMoving());
 
-            wait1Second();
 
             if (reachedDestination) {
                 Log.info("Successfully arrived at " + destinationName + ".");
