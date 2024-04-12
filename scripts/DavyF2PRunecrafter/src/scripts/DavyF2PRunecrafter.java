@@ -1,5 +1,6 @@
 package scripts;
 
+import org.json.JSONObject;
 import org.tribot.script.sdk.*;
 import org.tribot.script.sdk.antiban.Antiban;
 import org.tribot.script.sdk.interfaces.Positionable;
@@ -17,6 +18,7 @@ import org.tribot.script.sdk.query.Query;
 
 
 import java.awt.*;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -29,8 +31,10 @@ import javax.swing.SwingUtilities;
 import java.util.Random;
 
 import static scripts.BankHelper.*;
+import static scripts.BotConfigReader.readConfig;
 import static scripts.CustomAntiban.chanceOfFakeBreak;
 import static scripts.EquipmentHelper.withdrawAndEquipTiara;
+import static scripts.ErrorHelper.throwError;
 import static scripts.GrandExchangeHelper.purchaseMissingItems;
 import static scripts.LoginHelper.attemptLogin;
 import static scripts.ObjectHelper.interactWithObject;
@@ -77,7 +81,14 @@ public class DavyF2PRunecrafter implements TribotScript {
 			e.printStackTrace();
 		}
 
-		selectedRuneType = System.getProperty("selectedRuneType", "None");
+		try {
+			JSONObject botSettings = readConfig("botSettings.json");
+			selectedRuneType = botSettings.optString("selectedRuneType", "None");
+			Log.info("Selected Rune Type: " + selectedRuneType);
+		} catch (IOException e) {
+			e.printStackTrace();
+			throwError(e.toString());
+		}
 
 		initializeDaxWalker();
 
