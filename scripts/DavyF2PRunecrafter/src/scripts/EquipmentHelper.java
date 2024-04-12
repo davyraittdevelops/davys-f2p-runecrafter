@@ -1,6 +1,7 @@
 package scripts;
 
 import org.tribot.script.sdk.Inventory;
+import org.tribot.script.sdk.Log;
 import org.tribot.script.sdk.Waiting;
 import org.tribot.script.sdk.query.Query;
 import org.tribot.script.sdk.types.InventoryItem;
@@ -8,6 +9,7 @@ import org.tribot.script.sdk.types.InventoryItem;
 import java.util.Optional;
 
 import static scripts.BankHelper.withdrawFromBank;
+import static scripts.ErrorHelper.throwError;
 import static scripts.Utils.getRequiredTiara;
 
 public class EquipmentHelper {
@@ -21,17 +23,17 @@ public class EquipmentHelper {
                 .isPresent();
 
         if (isTiaraEquipped) {
-            System.out.println(requiredTiara + " is already equipped.");
+            Log.info(requiredTiara + " is already equipped.");
             return true; // No need to withdraw and equip if already wearing the tiara
         }
 
         if (requiredTiara == null) {
-            System.err.println("No tiara is required for the selected rune type: " + selectedRuneType);
+            throwError("No tiara is required for the selected rune type: " + selectedRuneType);
             return false;
         }
 
         if (!withdrawFromBank(requiredTiara, 1)) {
-            System.err.println("Failed to withdraw the required tiara: " + requiredTiara);
+            throwError("Failed to withdraw the required tiara: " + requiredTiara);
             return false;
         }
 
@@ -43,17 +45,17 @@ public class EquipmentHelper {
     public static boolean equipItem(String itemName) {
         Optional<InventoryItem> itemOpt = Query.inventory().nameEquals(itemName).findFirst();
         if (!itemOpt.isPresent()) {
-            System.err.println(itemName + " not found in inventory.");
+            throwError(itemName + " not found in inventory.");
             return false;
         }
 
         InventoryItem item = itemOpt.get();
         if (item.click("Wear")) {
-            System.out.println("Equipping " + itemName + "...");
+            Log.info("Equipping " + itemName + "...");
             Waiting.waitUntil(9000, () -> Inventory.contains(itemName));
             return true;
         } else {
-            System.err.println("Failed to equip " + itemName + ".");
+            Log.info("Failed to equip " + itemName + ".");
             return false;
         }
     }

@@ -1,5 +1,6 @@
 package scripts;
 
+import org.tribot.script.sdk.Log;
 import org.tribot.script.sdk.input.Mouse;
 
 import java.util.Random;
@@ -14,7 +15,7 @@ public class CustomAntiban {
 
         if (chance == 0) {
             Mouse.leaveScreen();
-            System.out.println("Taking a fake break: Mouse has left the screen.");
+            Log.info("Taking a fake break: Mouse has left the screen.");
             miniBreak();
         }
     }
