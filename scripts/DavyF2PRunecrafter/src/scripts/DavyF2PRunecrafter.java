@@ -134,44 +134,91 @@ public class DavyF2PRunecrafter implements TribotScript {
 	}
 
 	private void craftAirRunes() {
-		walkToFallyBank();
+		boolean successFullyWalkedToFallyBank = walkToFallyBank();
+		if (!successFullyWalkedToFallyBank) {
+			throwError("Failed to walk to falador bank three times, stopping the script..");
+		}
 
 		while(true) {
 			// Check if the Bank contains enough pure essence and if we are still wearing the tiara
 			List<String> missingItems = checkBankForSupplies(selectedRuneType);
 
+
 			if (missingItems.isEmpty()) {
 				// If everything is as should be, do another round
 				boolean succesFullyWGotItemsFromBank = withdrawFromBank("Pure essence", 28);
+				if (!succesFullyWGotItemsFromBank) {
+					Log.info("Failed to get items from the bank three times, trying to renavigate to bank..");
+					boolean successFullyWalkedBackToBank = walkToFallyBank();
+					if (!successFullyWalkedBackToBank) {
+						throwError("Failed to walk back to falador bank three times, stopping the script..");
+					}
+				}
 
 				boolean successFullyWalkedToAirAltar = walkToAirAltar();
+				if (!successFullyWalkedToAirAltar) {
+					throwError("Failed to walk to the air altar three times, stopping the script..");
+				}
 
 				boolean interactedWithRuins = interactWithObject("Mysterious ruins", "Enter");
+				if (!interactedWithRuins) {
+					ensureReturnToBank();
+					continue;
+				}
+
 
 				boolean interactedWithAltar = interactWithObject("Altar", "Craft-rune");
+				if (!interactedWithAltar) {
+					ensureReturnToBank();
+					continue;
+				}
+
 
 				boolean interactedWithPortal = interactWithObject("Portal", "Use");
+				if (!interactedWithPortal) {
+					ensureReturnToBank();
+					continue;
+				}
 
-				boolean successFullyWalkedToFallyBank = walkToFallyBank();
+				boolean successFullyWalkedBackToBank = walkToFallyBank();
+				if (!successFullyWalkedBackToBank) {
+					throwError("Failed to walk back to falador bank three times, stopping the script..");
+				}
 
 				boolean succesFullyDepositedInventory = depositInventoryToBankAndKeepOpen();
+				if (!succesFullyDepositedInventory) {
+					ensureReturnToBank();
+					continue;
+				}
 
 				chanceOfFakeBreak();
 
-				tripsDone++;  // Ensure this variable is declared and initialized appropriately elsewhere in your script
+				tripsDone++;
+
 			} else {
 				// If we are missing stuff, go and purchase it
 				boolean purchasedMissingItems = purchaseMissingItems(missingItems);
+				if (!purchasedMissingItems) {
+					throwError("Failed to purchase items we needed at least three times, stopping script.. ");
+				}
 
-				boolean successFullyWalkedToFallyBank = walkToFallyBank();
+				boolean successFullyWalkedBackToBank = walkToFallyBank();
+				if (!successFullyWalkedBackToBank) {
+					throwError("Failed to walk back to falador bank three times, stopping the script..");
+				}
 			}
-
 
 		}
 
-
 	}
 
+	private boolean ensureReturnToBank() {
+		boolean success = walkToFallyBank();
+		if (!success) {
+			throwError("Failed to walk back to Falador bank three times, stopping the script..");
+		}
+		return success;
+	}
 
 	private void initializeDaxWalker() {
 		try {
