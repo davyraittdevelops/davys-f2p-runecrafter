@@ -117,7 +117,7 @@ public class DavyF2PRunecrafter implements TribotScript {
 		}
 
 		// Got all the items we need, equip them and get ready to craft!!
-		withdrawAndEquipTiara(selectedRuneType);
+		boolean equippedTiara = withdrawAndEquipTiara(selectedRuneType);
 
 		switch (selectedRuneType) {
 			case "Craft air runes":
@@ -142,30 +142,30 @@ public class DavyF2PRunecrafter implements TribotScript {
 
 			if (missingItems.isEmpty()) {
 				// If everything is as should be, do another round
-				withdrawFromBank("Pure essence", 28);
+				boolean succesFullyWGotItemsFromBank = withdrawFromBank("Pure essence", 28);
 
-				walkToAirAltar();
+				boolean successFullyWalkedToAirAltar = walkToAirAltar();
 
-				interactWithObject("Mysterious ruins", "Enter");
+				boolean interactedWithRuins = interactWithObject("Mysterious ruins", "Enter");
 
-				interactWithObject("Altar", "Craft-rune");
+				boolean interactedWithAltar = interactWithObject("Altar", "Craft-rune");
 
-				interactWithObject("Portal", "Use");
+				boolean interactedWithPortal = interactWithObject("Portal", "Use");
 
-				walkToFallyBank();
+				boolean successFullyWalkedToFallyBank = walkToFallyBank();
 
-				chanceOfFakeBreak();
-
-				depositInventoryToBankAndKeepOpen();
+				boolean succesFullyDepositedInventory = depositInventoryToBankAndKeepOpen();
 
 				chanceOfFakeBreak();
 
-				tripsDone++;
+				tripsDone++;  // Ensure this variable is declared and initialized appropriately elsewhere in your script
 			} else {
-				// If we are missing stuf, go and purchase it
-				purchaseMissingItems(missingItems);
-				walkToFallyBank();
+				// If we are missing stuff, go and purchase it
+				boolean purchasedMissingItems = purchaseMissingItems(missingItems);
+
+				boolean successFullyWalkedToFallyBank = walkToFallyBank();
 			}
+
 
 		}
 

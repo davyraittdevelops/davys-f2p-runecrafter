@@ -8,54 +8,63 @@ import org.tribot.script.sdk.walking.GlobalWalking;
 
 import static scripts.ErrorHelper.throwError;
 import static scripts.RunHelper.checkIfWeShouldRun;
-import static scripts.WaitHelper.*;
 
 public class WalkHelper {
 
-    private static final int TOLERANCE = 3; // Tiles
+    private static final int TOLERANCE = 4; // Tiles
+    private static final int MAX_RETRIES = 3; // Maximum number of retries
 
-    public static void walkToGrandExchange() {
-        walkTo(new WorldTile(3164, 3492, 0), "Grand Exchange");
-    }
-
-    public static void walkToFallyBank() {
+    public static boolean walkToGrandExchange() {
         checkIfWeShouldRun();
-        walkTo(new WorldTile(3011, 3357, 0), "Fally Bank");
+        return walkTo(new WorldTile(3164, 3492, 0), "Grand Exchange");
     }
 
-    public static void walkToAirAltar() {
+    public static boolean walkToFallyBank() {
         checkIfWeShouldRun();
-        walkTo(new WorldTile(2986, 3294, 0), "Air Altar");
+        return walkTo(new WorldTile(3011, 3357, 0), "Fally Bank");
     }
 
-    private static void walkTo(WorldTile destination, String destinationName) {
+    public static boolean walkToAirAltar() {
+        checkIfWeShouldRun();
+        return walkTo(new WorldTile(2986, 3294, 0), "Air Altar");
+    }
+
+    private static boolean walkTo(WorldTile destination, String destinationName) {
         WorldTile currentPosition = MyPlayer.getTile();
 
         // Check if we are within a tolerance distance from the destination
         if (currentPosition.distanceTo(destination) <= TOLERANCE) {
             Log.info("Already close to " + destinationName + ".");
-            return; // Exit the method early since we're close enough to the destination
+            return true; // Exit the method early since we're close enough to the destination
         }
 
-        checkIfWeShouldRun();
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            Log.info("Attempt " + attempt + " to walk to " + destinationName);
+            checkIfWeShouldRun();
+            boolean success = GlobalWalking.walkTo(destination);
 
-        boolean success = GlobalWalking.walkTo(destination);
+            if (success) {
+                Log.info("Walking to " + destinationName + ".");
+                // Wait until the player stops moving to consider the walk finished.
+                boolean reachedDestination = Waiting.waitUntil(15000, () -> MyPlayer.getTile().distanceTo(destination) <= TOLERANCE && !MyPlayer.isMoving());
 
-        if (success) {
-            Log.info("Walking to " + destinationName + ".");
-            // Wait until the player stops moving to consider the walk finished.
-            boolean reachedDestination = Waiting.waitUntil(15000, () -> MyPlayer.getTile().distanceTo(destination) <= 5 && !MyPlayer.isMoving());
-
-
-            if (reachedDestination) {
-                Log.info("Successfully arrived at " + destinationName + ".");
+                if (reachedDestination) {
+                    Log.info("Successfully arrived at " + destinationName + ".");
+                    return true;
+                } else {
+                    Log.info("Failed to reach " + destinationName + " on attempt " + attempt + ".");
+                }
             } else {
-                Log.error("Timed out waiting to reach " + destinationName + ".");
-                throwError("Failed to walk to " + destinationName + " within time limit.");
+                Log.error("Failed to initiate walk to " + destinationName + " on attempt " + attempt + ".");
             }
-        } else {
-            Log.error("Failed to initiate walk to " + destinationName + ".");
-            throwError("Failed to walk to " + destinationName + ".");
+
+            if (attempt < MAX_RETRIES) {
+                // Wait a random time between retries
+                Waiting.waitNormal(3000, 1000);
+            }
         }
+
+        Log.error("Failed to walk to " + destinationName + " after " + MAX_RETRIES + " attempts.");
+        return false;
     }
 }

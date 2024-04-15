@@ -14,7 +14,24 @@ import static scripts.ErrorHelper.throwError;
 public class ObjectHelper {
 
     public static boolean interactWithObject(String nameObject, String interactAction) {
-        boolean areWeThere = Waiting.waitUntil(8000, () -> !MyPlayer.isMoving()); // Adjust timeout as necessary
+        boolean success = false;
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            Log.info("Attempt " + attempt + " to interact with " + nameObject);
+            success = tryInteractWithObject(nameObject, interactAction);
+            if (success) {
+                return true;
+            }
+
+            Log.info("Interact somehow failed, waiting a few seconds and retrying again");
+            Waiting.waitNormal(3000, 1000);
+        }
+
+        throwError("Failed to " + interactAction + " with " + nameObject + " after 3 attempts.");
+        return false;
+    }
+
+    private static boolean tryInteractWithObject(String nameObject, String interactAction) {
+        boolean areWeThere = Waiting.waitUntil(8000, () -> !MyPlayer.isMoving());
 
         // Search for the object nearby
         Optional<GameObject> gameObject = Query.gameObjects()
@@ -25,7 +42,7 @@ public class ObjectHelper {
 
         if (!gameObject.isPresent()) {
             Log.info("GameObject not found.");
-            throwError("Failed to find object " + nameObject);
+            return false;
         }
 
         Log.info("Found object: " + nameObject);
@@ -53,19 +70,17 @@ public class ObjectHelper {
                 Log.info("We are now near the ruins again!");
             }
 
-            if (!completedInteraction) {
+            if (completedInteraction) {
+                Log.info("Successfully interacted with " + nameObject + ".");
+                return true;
+            } else {
                 Log.error("Interaction timed out.");
-                throwError("Failed to complete interaction with " + nameObject + " within time limit.");
+                return false;
             }
-
-            Log.info("Successfully interacted with " + nameObject + ".");
-            return true;
         } else {
             Log.info("Failed to " + interactAction + " with " + nameObject + ".");
-            throwError("Failed to " + interactAction + " with " + nameObject + ".");
+            return false;
         }
-
-        return false;
     }
 
     private static boolean waitForNearbyObject(String name) {

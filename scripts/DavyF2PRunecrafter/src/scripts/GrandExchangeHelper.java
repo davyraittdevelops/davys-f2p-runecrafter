@@ -19,17 +19,22 @@ public class GrandExchangeHelper {
 
     public static boolean buyItemFromGE(String itemName, int quantity, int initialPrice) {
         final int maxRetries = 3; // Maximum number of retries for buying an item
-        final double priceIncreaseFactor = 2; // Price increase factor for each retry (10%)
+        final double priceIncreaseFactor = 1.1; // Price increase factor for each retry (10%)
         int currentPrice = initialPrice;
         boolean offerCompleted = false;
 
         for (int attempt = 0; attempt < maxRetries; attempt++) {
             if (!GrandExchange.isOpen() && !GrandExchange.open()) {
                 Log.info("Failed to open the Grand Exchange.");
-                return false;
+                if (attempt < maxRetries - 1) {
+                    Waiting.waitNormal(3000, 1000); // Random wait between retries
+                    continue;
+                } else {
+                    return false;
+                }
             }
 
-            Waiting.waitUntil(9000, () -> GrandExchange.isOpen());
+            Waiting.waitUntil(9000, GrandExchange::isOpen);
 
             GrandExchange.CreateOfferConfig offerConfig = GrandExchange.CreateOfferConfig.builder()
                     .itemName(itemName)
@@ -39,15 +44,17 @@ public class GrandExchangeHelper {
 
             if (!GrandExchange.placeOffer(offerConfig)) {
                 Log.info("Failed to place buy offer for " + itemName + " at price " + currentPrice);
-                return false;
+                if (attempt < maxRetries - 1) {
+                    Waiting.waitNormal(3000, 1000); // Random wait between retries
+                    continue;
+                } else {
+                    return false;
+                }
             }
 
             Log.info("Buy offer for " + itemName + " placed at price " + currentPrice + ". Waiting for completion...");
+            Waiting.waitNormal(5000, 750); // Wait a bit for the offer to complete
 
-            //Wait a bit for the offer to complete
-            Waiting.waitNormal(5000, 750);
-
-            // Fetch the offer and check its status
             Optional<GrandExchangeOffer> offerOpt = Query.grandExchangeOffers()
                     .itemNameEquals(itemName)
                     .stream()
@@ -66,24 +73,11 @@ public class GrandExchangeHelper {
                     Log.info("Offer did not complete. Increasing price and retrying...");
                     currentPrice = (int) (currentPrice * priceIncreaseFactor); // Increase the price by 10%
                     GrandExchange.abort(offer.getSlot());
-
-                    boolean isAborted = Waiting.waitUntil(4000, () -> {
-                        // Refresh the offer to get the latest status
-                        Optional<GrandExchangeOffer> refreshedOffer = Query.grandExchangeOffers()
-                                .itemNameEquals("itemName")
-                                .findFirst();
-
-                        return refreshedOffer.isPresent() && refreshedOffer.get().getStatus() == GrandExchangeOffer.Status.CANCELLED;
-                    });
-
-                    Log.info("Aborted offer");
-
+                    Waiting.waitNormal(4000, 1000); // Wait to check offer is aborted
                     GrandExchange.collectAll();
-
                 }
             } else {
                 Log.error("Failed to find the placed offer.");
-                throwError("Failed to find the placed offer");
                 return false;
             }
         }
@@ -96,8 +90,8 @@ public class GrandExchangeHelper {
         return true;
     }
 
-
-    public static void purchaseMissingItems(List<String> missingItems) {
+    public static boolean purchaseMissingItems(List<String> missingItems) {
+        boolean allItemsPurchased = true;
         Random random = new Random();
 
         for (String item : missingItems) {
@@ -126,10 +120,9 @@ public class GrandExchangeHelper {
 
             if (!buyItemFromGE(item, quantityToBuy, price)) {
                 Log.info("Failed to buy " + item);
-                // Handle failure: stop the script, retry, or log an error, etc.
+                allItemsPurchased = false;
             } else {
                 Log.info("Successfully placed a buy offer for " + quantityToBuy + " of " + item);
-
             }
         }
 
@@ -137,6 +130,8 @@ public class GrandExchangeHelper {
         if (GrandExchange.isOpen()) {
             GrandExchange.close();
         }
+
+        return allItemsPurchased;
     }
 
 }

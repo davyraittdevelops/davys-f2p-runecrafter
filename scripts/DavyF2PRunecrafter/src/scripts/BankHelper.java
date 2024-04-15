@@ -17,39 +17,45 @@ import static scripts.WaitHelper.*;
 
 public class BankHelper {
 
+    private static final int MAX_RETRIES = 3; // Maximum number of retries
 
     public static boolean withdrawFromBank(String itemName, int count) {
-        if (!Bank.ensureOpen()) {
-            Log.error("Could not open the bank.");
-            throwError("Could not open the bank.");
-            return false;
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            if (!Bank.ensureOpen()) {
+                Log.error("Attempt " + attempt + ": Could not open the bank.");
+                if (attempt == MAX_RETRIES) {
+                    throwError("Could not open the bank after " + MAX_RETRIES + " attempts.");
+                    return false;
+                }
+                Waiting.waitNormal(2000, 1000);
+                continue;
+            }
+
+            Waiting.waitUntil(5000, Bank::isOpen);
+
+            if (!Bank.contains(itemName)) {
+                Log.error("Bank does not contain the required item: " + itemName);
+                throwError("Bank does not contain the required item: " + itemName);
+                return false;
+            }
+
+            if (Bank.withdraw(itemName, count)) {
+                Waiting.waitUntil(6000, () -> Inventory.contains(itemName));
+                if (!Bank.close()) {
+                    Log.error("Failed to close the bank properly, but item was withdrawn.");
+                    throwError("Failed to close the bank properly, but item was withdrawn.");
+                }
+                Waiting.waitUntil(15000, () -> !Bank.isOpen());
+                return true;
+            } else {
+                Log.error("Attempt " + attempt + ": Failed to withdraw the required item: " + itemName);
+                if (attempt < MAX_RETRIES) {
+                    Waiting.waitNormal(3000, 1000); // Wait between retries
+                }
+            }
         }
-
-        Waiting.waitUntil(5000, Bank::isOpen);
-
-        if (!Bank.contains(itemName)) {
-            Log.error("Bank does not contain the required item: " + itemName);
-            throwError("Bank does not contain the required item: " + itemName);
-            return false;
-        }
-
-        if (!Bank.withdraw(itemName, count)) {
-            Log.error("Failed to withdraw the required item: " + itemName);
-            throwError("Failed to withdraw the required item: " + itemName);
-            return false;
-        }
-
-        Waiting.waitUntil(6000, () -> Inventory.contains(itemName));
-
-
-        if (!Bank.close()) {
-            Log.error("Failed to close the bank properly, but item was withdrawn.");
-            throwError("Failed to close the bank properly, but item was withdrawn.");
-        }
-
-        Waiting.waitUntil(15000, () -> !Bank.isOpen());
-
-        return true;
+        throwError("Failed to withdraw the required item: " + itemName + " after " + MAX_RETRIES + " attempts.");
+        return false;
     }
 
     public static List<String> checkBankForSupplies(String selectedRuneType) {
@@ -110,29 +116,34 @@ public class BankHelper {
     }
 
     public static boolean depositInventoryToBankAndKeepOpen() {
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            if (!Bank.ensureOpen()) {
+                Log.error("Attempt " + attempt + ": Could not open the bank to deposit inventory.");
+                if (attempt == MAX_RETRIES) {
+                    throwError("Could not open the bank to deposit inventory after " + MAX_RETRIES + " attempts.");
+                    return false;
+                }
+                Waiting.waitNormal(2000, 1000); // Random wait between 2 and 3 seconds
+                continue;
+            }
 
-        if (!Bank.ensureOpen()) {
-            Log.error("Could not open the bank to deposit inventory.");
-            throwError("Could not open the bank to deposit inventory.");
-            return false;
+            Waiting.waitUntil(15000, Bank::isOpen);
+
+            if (Bank.depositInventory()) {
+                Waiting.waitUntil(15000, Inventory::isEmpty);
+                if (!Inventory.isEmpty()) {
+                    throwError("Failed to empty inventory after deposit.");
+                }
+                return true;
+            } else {
+                Log.error("Attempt " + attempt + ": Failed to deposit inventory.");
+                if (attempt < MAX_RETRIES) {
+                    Waiting.waitNormal(3000, 1000); // Wait between retries
+                }
+            }
         }
-
-        Waiting.waitUntil(15000, Bank::isOpen);
-
-        if (!Bank.depositInventory()) {
-            Log.error("Failed to deposit inventory.");
-            throwError("Failed to deposit inventory.");
-            return false;
-        }
-
-        Waiting.waitUntil(15000, Inventory::isEmpty);
-
-        if (!Inventory.isEmpty()) {
-            throwError("Failed to empty inventory");
-        }
-
-        return true;
+        throwError("Failed to deposit inventory after " + MAX_RETRIES + " attempts.");
+        return false;
     }
-
 
 }
