@@ -19,7 +19,7 @@ public class GrandExchangeHelper {
 
     public static boolean buyItemFromGE(String itemName, int quantity, int initialPrice) {
         final int maxRetries = 3; // Maximum number of retries for buying an item
-        final double priceIncreaseFactor = 1.1; // Price increase factor for each retry (10%)
+        final double priceIncreaseFactor = 2; // Price increase factor for each retry (100%)
         int currentPrice = initialPrice;
         boolean offerCompleted = false;
 
